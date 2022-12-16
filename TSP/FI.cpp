@@ -103,7 +103,12 @@ int main(int argc, char** argv)
     vector<Point> not_in_path;
     vector<Point> in_path;
 
+    vector<Point> opt_tour;
+    ;
     load_tsp_file(argv[1], not_in_path);
+    std::string path(argv[1]);
+    auto opt_path = path.replace(path.find(".tsp"), 4, ".opt.tour");
+    load_opt_tour(opt_path, not_in_path, opt_tour);
 
     vector<pair<Point, Point>> edges;
 
@@ -138,4 +143,10 @@ int main(int argc, char** argv)
         auto tour = edges_to_path(edges);
         print_tour(tour);
     }
+
+    auto tour = edges_to_path(edges);
+    auto len = path_len(tour);
+    auto len_opt = path_len(opt_tour);
+    float gap = calc_gap(len, len_opt);
+    std::cout << "Gap to optimal tour: " << gap;
 }
