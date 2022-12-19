@@ -77,11 +77,11 @@ void load_opt_tour(std::string path, const std::vector<Point>& points, std::vect
     std::fstream file;
     file.open(path);
 
-    skiplines(file, 2);
-
-    std::string temp;
+    std::string temp("");
     int N;
-    file >> temp;
+    while(temp != "DIMENSION" && temp != "DIMENSION:"){
+        file >> temp;
+    }
     if (temp == "DIMENSION:")
         file >> N;
     else
