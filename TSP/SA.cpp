@@ -4,6 +4,7 @@
 #include <iostream>
 #include <random>
 #include <string>
+#include <unistd.h>
 
 using namespace std;
 
@@ -21,7 +22,7 @@ int main(int argc, char** argv)
     auto opt_path = path.replace(path.find(".tsp"), 4, ".opt.tour");
     load_opt_tour(opt_path, points, opt_tour);
 
-    int max_iter = std::stoi(argv[2]);
+    int splits = std::stoi(argv[2]);
     int max_iter_per_epoch = std::stoi(argv[3]);
 
     int Tmax = std::stoi(argv[4]);
@@ -38,11 +39,14 @@ int main(int argc, char** argv)
 
     int it_n = 1;
 
-    #ifdef SAVE_HIST
-    Logger logger("./SA_hist.csv");
-    #endif
+    float temp_factor = std::pow(float(Tmin) / Tmax, 1.0 / (splits - 1));
+    std::cout << "AAAAAA" << temp_factor << "\n";
 
-    for (int i = 0; i < max_iter && T >= Tmin; i++) {
+#ifdef SAVE_HIST
+    Logger logger("./SA_hist.csv");
+#endif
+
+    for (int i = 0; T > Tmin; i++) {
         for (int j = 0; j < max_iter_per_epoch; j++) {
             // std::uniform_int_distribution<> distr(0, tour.size() - 3);
             // int a = distr(ugen);
@@ -53,7 +57,8 @@ int main(int argc, char** argv)
             int a = distr(ugen);
             int b = distr(ugen);
 
-            if(a == b) continue;
+            if (a == b)
+                continue;
 
             float diff = dist(tour[a], tour[b]) + dist(tour[a + 1], tour[b + 1])
                 - dist(tour[a], tour[a + 1]) - dist(tour[b], tour[b + 1]);
@@ -66,26 +71,34 @@ int main(int argc, char** argv)
                 // std::cout << "A: " << a << " B: " << b << "\n";
                 // std::cout << "TEMP: " << T << " DISTANCE: " << diff << " URANDOM: " << U_random << " TRESHOLD: " << treshold << "\n";
                 if (U_random > treshold) {
-                    // std::cout << "REJECTED\n";
+#ifdef SAVE_HIST
+                    float gap = calc_gap(curr_path_len, opt_path_len);
+                    logger.log(it_n, curr_path_len, opt_path_len, gap);
+                    it_n++;
+#endif
+                    // print_tour(tour);
+                    // usleep(1000);
                     continue;
                 }
-                // std::cout << "ACCEPTED\n";
             }
             // std::cout << "TEMP: " << T << " DISTANCE: " << diff << "\n";
 
-            #ifdef SAVE_HIST
+#ifdef SAVE_HIST
             curr_path_len = path_len(tour);
-            #endif
+#endif
             std::reverse(tour.begin() + a + 1, tour.begin() + b + 1);
+// print_tour(tour);
+// usleep(1000);
+#ifdef SAVE_HIST
+            float gap = calc_gap(curr_path_len, opt_path_len);
+            logger.log(it_n, curr_path_len, opt_path_len, gap);
+            it_n++;
+#endif
         }
 
-        T = 0.99 * T;
-
-        #ifdef SAVE_HIST
-        float gap = calc_gap(curr_path_len, opt_path_len);
-        logger.log(it_n, curr_path_len, opt_path_len, gap);
-        it_n++;
-        #endif
-        print_tour(tour);
+        T = temp_factor * T;
     }
+    print_tour(tour);
+    float gap = calc_gap(curr_path_len, opt_path_len);
+    std::cout << "FINAL GAP: " << gap << "% FINAL TOUR LENGTH: " << curr_path_len << " OPT. PATH LENGTH: " << opt_path_len;
 }
