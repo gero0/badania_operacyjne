@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -112,6 +113,8 @@ int main(int argc, char** argv)
 
     vector<pair<Point, Point>> edges;
 
+    auto calc_start = std::chrono::high_resolution_clock::now();
+
     auto starting_point_i = min_element(not_in_path.begin(), not_in_path.end(), point_sort_f);
     Point starting_point = *starting_point_i;
     in_path.push_back(starting_point);
@@ -144,9 +147,13 @@ int main(int argc, char** argv)
         print_tour(tour);
     }
 
+    auto calc_stop = std::chrono::high_resolution_clock::now();
+
     auto tour = edges_to_path(edges);
     auto len = path_len(tour);
     auto len_opt = path_len(opt_tour);
     float gap = calc_gap(len, len_opt);
-    std::cout << "Gap to optimal tour: " << gap;
+    std::cout << "Gap to optimal tour: " << gap << "\n";
+    auto time = std::chrono::duration_cast<std::chrono::milliseconds>(calc_stop - calc_start).count();
+    std::cout << "Time: " << time << " ms";
 }

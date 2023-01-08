@@ -101,6 +101,7 @@ void load_opt_tour(std::string path, const std::vector<Point>& points, std::vect
         }
         opt_tour.push_back(point);
     }
+    opt_tour.push_back(opt_tour[0]);
     file.close();
 }
 

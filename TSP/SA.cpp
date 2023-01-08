@@ -1,5 +1,6 @@
 #include "tsp_helpers.h"
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <random>
@@ -40,7 +41,9 @@ int main(int argc, char** argv)
     int it_n = 1;
 
     float temp_factor = std::pow(float(Tmin) / Tmax, 1.0 / (splits - 1));
-    std::cout << "AAAAAA" << temp_factor << "\n";
+    std::cout << "Temp. decrease factor: " << temp_factor << "\n";
+
+    auto calc_start = std::chrono::high_resolution_clock::now();
 
 #ifdef SAVE_HIST
     Logger logger("./SA_hist.csv");
@@ -48,11 +51,6 @@ int main(int argc, char** argv)
 
     for (int i = 0; T > Tmin; i++) {
         for (int j = 0; j < max_iter_per_epoch; j++) {
-            // std::uniform_int_distribution<> distr(0, tour.size() - 3);
-            // int a = distr(ugen);
-            // std::uniform_int_distribution<> distr2(a + 1, tour.size() - 2);
-            // int b = distr(ugen);
-
             std::uniform_int_distribution<> distr(0, tour.size() - 2);
             int a = distr(ugen);
             int b = distr(ugen);
@@ -67,38 +65,36 @@ int main(int argc, char** argv)
             if (diff > 0) {
                 float U_random = uniform(ugen);
                 float treshold = std::exp(-diff / T);
-                //continue loop, don't accept worse solution
-                // std::cout << "A: " << a << " B: " << b << "\n";
-                // std::cout << "TEMP: " << T << " DISTANCE: " << diff << " URANDOM: " << U_random << " TRESHOLD: " << treshold << "\n";
                 if (U_random > treshold) {
-#ifdef SAVE_HIST
-                    float gap = calc_gap(curr_path_len, opt_path_len);
-                    logger.log(it_n, curr_path_len, opt_path_len, gap);
+                    // #ifdef SAVE_HIST
+                    //                     float gap = calc_gap(curr_path_len, opt_path_len);
+                    //                     logger.log(it_n, curr_path_len, opt_path_len, gap);
+                    // #endif
                     it_n++;
-#endif
-                    // print_tour(tour);
-                    // usleep(1000);
                     continue;
                 }
             }
-            // std::cout << "TEMP: " << T << " DISTANCE: " << diff << "\n";
+
+            std::reverse(tour.begin() + a + 1, tour.begin() + b + 1);
 
 #ifdef SAVE_HIST
             curr_path_len = path_len(tour);
-#endif
-            std::reverse(tour.begin() + a + 1, tour.begin() + b + 1);
-// print_tour(tour);
-// usleep(1000);
-#ifdef SAVE_HIST
             float gap = calc_gap(curr_path_len, opt_path_len);
             logger.log(it_n, curr_path_len, opt_path_len, gap);
             it_n++;
 #endif
         }
-
+        // std::cout << "TEXT T:" << T << "\n";
+        // print_tour(tour);
         T = temp_factor * T;
     }
+
+    auto calc_stop = std::chrono::high_resolution_clock::now();
+
     print_tour(tour);
+    curr_path_len = path_len(tour);
     float gap = calc_gap(curr_path_len, opt_path_len);
-    std::cout << "FINAL GAP: " << gap << "% FINAL TOUR LENGTH: " << curr_path_len << " OPT. PATH LENGTH: " << opt_path_len;
+    std::cout << "FINAL GAP: " << gap << "% FINAL TOUR LENGTH: " << curr_path_len << " OPT. PATH LENGTH: " << opt_path_len << "\n";
+    auto time = std::chrono::duration_cast<std::chrono::milliseconds>(calc_stop - calc_start).count();
+    std::cout << "Time: " << time << " s";
 }

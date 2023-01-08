@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <iostream>
 #include <string>
+#include <chrono>
 
 using namespace std;
 
@@ -30,6 +31,8 @@ int main(int argc, char** argv)
 
     int it_n = 1;
 
+    auto calc_start = std::chrono::high_resolution_clock::now();
+
     while (improvement) {
         improvement = false;
         int min_dist = 0;
@@ -56,13 +59,20 @@ int main(int argc, char** argv)
 
         std::reverse(tour.begin() + a + 1, tour.begin() + b + 1);
 
-#ifdef SAVE_HIST
         curr_path_len += min_dist;
+#ifdef SAVE_HIST
         float gap = calc_gap(curr_path_len, opt_path_len);
         logger.log(it_n, curr_path_len, opt_path_len, gap);
         it_n++;
 #endif
 
-        print_tour(tour);
+        // print_tour(tour);
     }
+
+    auto calc_stop = std::chrono::high_resolution_clock::now();
+    
+    float gap = calc_gap(curr_path_len, opt_path_len);
+    std::cout << "FINAL GAP: " << gap << "% FINAL TOUR LENGTH: " << curr_path_len << " OPT. PATH LENGTH: " << opt_path_len << "\n";
+    auto time = std::chrono::duration_cast<std::chrono::milliseconds>(calc_stop - calc_start).count();
+    std::cout << "Time: " << time << " ms";
 }
