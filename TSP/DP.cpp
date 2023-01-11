@@ -11,7 +11,7 @@
 
 using namespace std;
 
-int tsp(int visited, int current, int completed, const vector<vector<int>>& distance_matrix, vector<vector<int>>& cache)
+int tsp(long visited, int current, long completed, const vector<vector<int>>& distance_matrix, vector<vector<int>>& cache)
 {
     if (visited == completed) {
         int d = distance_matrix[current][0];
@@ -65,9 +65,38 @@ int main(int argc, char** argv)
     auto opt_path = path.replace(path.find(".tsp"), 4, ".opt.tour");
     load_opt_tour(opt_path, points, opt_tour);
 
-    int completed = (1 << points.size()) - 1;
+    long completed = (1L << points.size()) - 1;
     auto cache = vector<vector<int>>(completed, vector<int>(points.size(), -1));
     auto distance_matrix = calc_dist_matrix(points);
 
-    cout << "Minimum Distance: " << tsp(1, 0, completed, distance_matrix, cache);
+
+    int best = INT_MAX;
+    int best_node = 0;
+    for (int i = 1; i < points.size(); i++) {
+        auto res = tsp(0, i, completed, distance_matrix, cache);
+        std::cout << res;
+        if (res < best) {
+            best = res;
+            best_node = i;
+        }
+    }
+
+    for (auto v : distance_matrix) {
+        for (auto node : v) {
+            std::cout << node << " ";
+        }
+        std::cout << "\n";
+    }
+
+
+    // for (auto v : cache) {
+    //     for (auto node : v) {
+    //         std::cout << node << " ";
+    //     }
+    //     std::cout << "\n";
+    // }
+
+    cout << "Minimum Distance: " << best << "\n";
+    cout << "Me: " << dist(points[best_node], points[0]) << "\n";
+    cout << "Opt:" << path_len(opt_tour);
 }

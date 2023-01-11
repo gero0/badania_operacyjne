@@ -61,7 +61,10 @@ void load_tsp_file(std::string path, std::vector<Point>& points)
     else
         file >> temp >> N;
 
-    skiplines(file, 3);
+    std::string tempp;
+    do {
+        file >> tempp;
+    }while(tempp != "NODE_COORD_SECTION");
 
     for (unsigned int i = 0; i < N; i++) {
         unsigned int id;
