@@ -3,6 +3,10 @@
 #include <climits>
 #include <cstdlib>
 #include <iostream>
+#include <list>
+#include <sstream>
+#include <stdexcept>
+#include <string>
 #include <vector>
 
 using namespace std;
@@ -10,6 +14,158 @@ using namespace std;
 vector<vector<int>> cache;
 vector<vector<int>> cache_next_node;
 vector<vector<int>> distance_matrix;
+
+int dist(pair<float, float> p1, pair<float, float> p2)
+{
+    int xd = p2.first - p1.first;
+    int yd = p2.second - p1.second;
+    return (int)(0.5f + std::sqrt(xd * xd + yd * yd));
+}
+
+vector<vector<int>> calc_dist_matrix(vector<pair<float, float>> points)
+{
+    auto distance_matrix = vector<vector<int>>(points.size(), vector<int>(points.size(), 0));
+    for (int i = 0; i < points.size(); i++) {
+        for (int j = 0; j < points.size(); j++) {
+            if (i == j)
+                continue;
+            distance_matrix[i][j] = dist(points[i], points[j]);
+        }
+    }
+    return distance_matrix;
+}
+
+vector<vector<int>> calc_geo_matrix(vector<pair<float, float>> points)
+{
+    auto distance_matrix = vector<vector<int>>(points.size(), vector<int>(points.size(), 0));
+    for (int i = 0; i < points.size(); i++) {
+        for (int j = 0; j < points.size(); j++) {
+            if (i == j)
+                continue;
+                //TODO: implement
+            distance_matrix[i][j] = dist(points[i], points[j]);
+        }
+    }
+    return distance_matrix;
+}
+
+string trim(const string& s)
+{
+    auto start = s.begin();
+    while (start != s.end() && isspace(*start)) {
+        start++;
+    }
+
+    auto end = s.end();
+    do {
+        end--;
+    } while (distance(start, end) > 0 && isspace(*end));
+
+    return string(start, end + 1);
+}
+
+vector<string> tokenize(string str, char delimiter)
+{
+    vector<string> tokens;
+    string segment;
+    stringstream ss(str);
+    while (getline(ss, segment, ':')) {
+        segment = trim(segment);
+        tokens.push_back(segment);
+    }
+
+    return tokens;
+}
+
+vector<int> load_opt_tour(string path)
+{
+    fstream file;
+    file.open(path);
+    string line;
+    vector<int> tour;
+
+    int dimension = 0;
+    do {
+        getline(file, line);
+        auto tokens = tokenize(line, ':');
+        if (tokens[0] == "DIMENSION") {
+            dimension = std::stoi(tokens[1]);
+        }
+    } while (line != "TOUR_SECTION");
+
+    if(dimension==0){
+        throw runtime_error("No dimension given in input file!");
+    }
+
+    for(int i=0; i<dimension; i++){
+        int id;
+        file >> id;
+        tour.push_back(id-1);
+    }
+
+    return tour;
+}
+
+vector<vector<int>> load_tsp_file(string path)
+{
+    fstream file;
+    file.open(path);
+
+    string weight_type("EUC_2D");
+    string input_type("FUNCTION");
+    int dimension = 0;
+
+    string line;
+    do {
+        getline(file, line);
+        auto tokens = tokenize(line, ':');
+        if (tokens[0] == "DIMENSION") {
+            dimension = std::stoi(tokens[1]);
+        } else if (tokens[0] == "EDGE_WEIGHT_FORMAT") {
+            input_type = tokens[1];
+        }
+        else if (tokens[0] == "EDGE_WEIGHT_TYPE") {
+            weight_type = tokens[1];
+        }
+    } while (line != "NODE_COORD_SECTION" && line != "EDGE_WEIGHT_SECTION");
+
+    if (dimension == 0) {
+        throw runtime_error("No dimension given in input file!");
+    }
+
+    if (input_type == "FUNCTION") {
+        vector<pair<float, float>> points;
+
+        for (int i = 0; i < dimension; i++) {
+            int id;
+            float x, y;
+            file >> id >> x >> y;
+            points.push_back({ x, y });
+        }
+
+        if(weight_type == "EUC_2D"){
+            return calc_dist_matrix(points);
+        }else if(weight_type == "GEO") {
+            return calc_geo_matrix(points);
+        }else{
+            throw runtime_error("Unsupported input format!");
+        }
+
+    } else if (input_type == "FULL_MATRIX") {
+        vector<vector<int>> dist_matrix(dimension, vector<int>(dimension, 0));
+        for (int row = 0; row < dimension; row++) {
+            for (int col = 0; col < dimension; col++) {
+                int value;
+                file >> value;
+                dist_matrix[row][col] = value;
+            }
+        }
+
+        return dist_matrix;
+    } else {
+        throw runtime_error("Unsupported input format!");
+    }
+}
 
 int tsp(int current, long included_nodes)
 {
@@ -51,45 +207,32 @@ int tsp(int current, long included_nodes)
     return best_len;
 }
 
-int traverse(long included, int current){
-    if(current == 0){
+int traverse(long included, int current)
+{
+    if (current == 0) {
         return current;
     }
     // vector<int> path;
     int next_node = cache_next_node[included][current];
     long new_visited = included & ~(1 << current);
-    std::cout << traverse(new_visited, next_node) + 1 << " ";
+    cout << traverse(new_visited, next_node) + 1 << " ";
     return current;
-}
-
-vector<vector<int>> calc_dist_matrix(std::vector<Point> points)
-{
-    auto distance_matrix = vector<vector<int>>(points.size(), vector<int>(points.size(), 0));
-    for (int i = 0; i < points.size(); i++) {
-        for (int j = 0; j < points.size(); j++) {
-            if (i == j)
-                continue;
-            distance_matrix[i][j] = dist(points[i], points[j]);
-        }
-    }
-    return distance_matrix;
 }
 
 int main(int argc, char** argv)
 {
-    vector<Point> points;
     vector<Point> opt_tour;
-    load_tsp_file(argv[1], points);
-    std::string path(argv[1]);
-    auto opt_path = path.replace(path.find(".tsp"), 4, ".opt.tour");
-    load_opt_tour(opt_path, points, opt_tour);
+    string path(argv[1]);
+    // auto opt_path = path.replace(path.find(".tsp"), 4, ".opt.tour");
+    // load_opt_tour(opt_path, points, opt_tour);
 
-    size_t perm_count = (1L << points.size()) - 1;
-    cache = vector<vector<int>>(perm_count, vector<int>(points.size(), -1));
-    cache_next_node = vector<vector<int>>(perm_count, vector<int>(points.size(), -1));
-    distance_matrix = calc_dist_matrix(points);
+    distance_matrix = load_tsp_file(path);
 
-    long all_visited_mask = (1 << points.size()) - 2;
+    size_t perm_count = (1L << distance_matrix.size()) - 1;
+    cache = vector<vector<int>>(perm_count, vector<int>(distance_matrix.size(), -1));
+    cache_next_node = vector<vector<int>>(perm_count, vector<int>(distance_matrix.size(), -1));
+
+    long all_visited_mask = (1 << distance_matrix.size()) - 2;
 
     int best_len = INT_MAX;
     int best_node = 0;
@@ -97,45 +240,45 @@ int main(int argc, char** argv)
     //by incrementing by 2 last bit (starting point) will always be 0
     //start from bottom-up
     for (size_t mask = 2; mask <= all_visited_mask; mask += 2) {
-        for (int i = 1; i < points.size(); i++) {
+        for (int i = 1; i < distance_matrix.size(); i++) {
             int result = tsp(i, mask);
-            if(mask == all_visited_mask){
-                if (best_len > result){
-                    best_len = result + dist(points[0], points[i]) ;
+            if (mask == all_visited_mask) {
+                if (best_len > result) {
+                    best_len = result + distance_matrix[0][i];
                     best_node = i;
                 }
             }
         }
     }
 
-    std::cout << traverse(all_visited_mask, best_node) + 1 << "\n";
+    cout << traverse(all_visited_mask, best_node) + 1 << "\n";
 
     // for (auto v : distance_matrix) {
     //     for (auto node : v) {
-    //         std::cout << node << " ";
+    //         cout << node << " ";
     //     }
-    //     std::cout << "\n";
+    //     cout << "\n";
     // }
 
     // for (auto v : cache) {
     //     for (auto node : v) {
-    //         std::cout << node << " ";
+    //         cout << node << " ";
     //     }
-    //     std::cout << "\n";
+    //     cout << "\n";
     // }
 
     // for (auto v : cache_next_node) {
     //     for (auto node : v) {
-    //         std::cout << node << " ";
+    //         cout << node << " ";
     //     }
-    //     std::cout << "\n";
+    //     cout << "\n";
     // }
 
     // do {
-    //     std::cout << best_node << " ";
+    //     cout << best_node << " ";
     //     best_node = cache_next_node[completed][best_node];
     // }while(best_node != -1);
     cout << "Best node : " << best_node << "\n";
     cout << "Minimum Distance: " << best_len << "\n";
-    cout << "Opt:" << path_len(opt_tour);
+    // cout << "Opt:" << path_len(opt_tour);
 }
