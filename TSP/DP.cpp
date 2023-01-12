@@ -1,48 +1,65 @@
 #include "tsp_helpers.h"
-#include <algorithm>
 #include <chrono>
 #include <climits>
 #include <cstdlib>
 #include <iostream>
-#include <string>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 using namespace std;
 
-int tsp(long visited, int current, long completed, const vector<vector<int>>& distance_matrix, vector<vector<int>>& cache)
+vector<vector<int>> cache;
+vector<vector<int>> cache_next_node;
+vector<vector<int>> distance_matrix;
+
+int tsp(int current, long included_nodes)
 {
-    if (visited == completed) {
-        int d = distance_matrix[current][0];
-        return d;
+    if ((included_nodes & (1 << current)) == 0) {
+        //path from x that doesnt include x - impossible
+        return INT_MAX;
     }
 
-    if (cache[visited][current] != -1) {
-        return cache[visited][current];
+    if (included_nodes == (1 << current)) {
+        //only current node is in path - return distance to starting node
+        cache_next_node[included_nodes][current] = 0;
+        return distance_matrix[current][0];
+    }
+
+    if (cache[included_nodes][current] != -1) {
+        //cache hit?
+        return cache[included_nodes][current];
     }
 
     int best_len = INT_MAX;
+    int best_node = -1;
 
-    for (int i = 0; i < distance_matrix.size(); i++) {
-        if (i == current)
+    for (int i = 1; i < distance_matrix.size(); i++) {
+        //if skip if i is current node or is not included in the path
+        if (i == current || (included_nodes & (1 << i)) == 0)
             continue;
 
-        if (visited & (1 << i)) {
-            //node visited, skip
-            continue;
-        }
-
-        //set as visited
-        int new_visited = visited | (1 << i);
-        int result = distance_matrix[current][i] + tsp(new_visited, i, completed, distance_matrix, cache);
+        //remove current from mask
+        int new_included_nodes = included_nodes & ~(1 << current);
+        int result = distance_matrix[current][i] + tsp(i, new_included_nodes);
         if (best_len > result) {
             best_len = result;
+            best_node = i;
         }
     }
 
-    cache[visited][current] = best_len;
+    cache[included_nodes][current] = best_len;
+    cache_next_node[included_nodes][current] = best_node;
     return best_len;
+}
+
+int traverse(long included, int current){
+    if(current == 0){
+        return current;
+    }
+    // vector<int> path;
+    int next_node = cache_next_node[included][current];
+    long new_visited = included & ~(1 << current);
+    std::cout << traverse(new_visited, next_node) + 1 << " ";
+    return current;
 }
 
 vector<vector<int>> calc_dist_matrix(std::vector<Point> points)
@@ -50,6 +67,8 @@ vector<vector<int>> calc_dist_matrix(std::vector<Point> points)
     auto distance_matrix = vector<vector<int>>(points.size(), vector<int>(points.size(), 0));
     for (int i = 0; i < points.size(); i++) {
         for (int j = 0; j < points.size(); j++) {
+            if (i == j)
+                continue;
             distance_matrix[i][j] = dist(points[i], points[j]);
         }
     }
@@ -65,29 +84,38 @@ int main(int argc, char** argv)
     auto opt_path = path.replace(path.find(".tsp"), 4, ".opt.tour");
     load_opt_tour(opt_path, points, opt_tour);
 
-    long completed = (1L << points.size()) - 1;
-    auto cache = vector<vector<int>>(completed, vector<int>(points.size(), -1));
-    auto distance_matrix = calc_dist_matrix(points);
+    size_t perm_count = (1L << points.size()) - 1;
+    cache = vector<vector<int>>(perm_count, vector<int>(points.size(), -1));
+    cache_next_node = vector<vector<int>>(perm_count, vector<int>(points.size(), -1));
+    distance_matrix = calc_dist_matrix(points);
 
+    long all_visited_mask = (1 << points.size()) - 2;
 
-    int best = INT_MAX;
+    int best_len = INT_MAX;
     int best_node = 0;
-    for (int i = 1; i < points.size(); i++) {
-        auto res = tsp(0, i, completed, distance_matrix, cache);
-        std::cout << res;
-        if (res < best) {
-            best = res;
-            best_node = i;
+
+    //by incrementing by 2 last bit (starting point) will always be 0
+    //start from bottom-up
+    for (size_t mask = 2; mask <= all_visited_mask; mask += 2) {
+        for (int i = 1; i < points.size(); i++) {
+            int result = tsp(i, mask);
+            if(mask == all_visited_mask){
+                if (best_len > result){
+                    best_len = result + dist(points[0], points[i]) ;
+                    best_node = i;
+                }
+            }
         }
     }
 
-    for (auto v : distance_matrix) {
-        for (auto node : v) {
-            std::cout << node << " ";
-        }
-        std::cout << "\n";
-    }
+    std::cout << traverse(all_visited_mask, best_node) + 1 << "\n";
 
+    // for (auto v : distance_matrix) {
+    //     for (auto node : v) {
+    //         std::cout << node << " ";
+    //     }
+    //     std::cout << "\n";
+    // }
 
     // for (auto v : cache) {
     //     for (auto node : v) {
@@ -96,7 +124,18 @@ int main(int argc, char** argv)
     //     std::cout << "\n";
     // }
 
-    cout << "Minimum Distance: " << best << "\n";
-    cout << "Me: " << dist(points[best_node], points[0]) << "\n";
+    // for (auto v : cache_next_node) {
+    //     for (auto node : v) {
+    //         std::cout << node << " ";
+    //     }
+    //     std::cout << "\n";
+    // }
+
+    // do {
+    //     std::cout << best_node << " ";
+    //     best_node = cache_next_node[completed][best_node];
+    // }while(best_node != -1);
+    cout << "Best node : " << best_node << "\n";
+    cout << "Minimum Distance: " << best_len << "\n";
     cout << "Opt:" << path_len(opt_tour);
 }
