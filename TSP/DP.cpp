@@ -15,6 +15,40 @@ vector<vector<int>> cache;
 vector<vector<int>> cache_next_node;
 vector<vector<int>> distance_matrix;
 
+unsigned int path_len(const std::vector<int>& path, vector<vector<int>> dist_matrix)
+{
+    unsigned int len = 0;
+    for (int i = 0; i < path.size() - 1; i++) {
+        len += dist_matrix[path[i]][path[i + 1]];
+    }
+    len += dist_matrix[path[path.size() - 1]][path[0]];
+    return len;
+}
+
+float to_rad(float x)
+{
+    float PI = 3.141592;
+    int deg = (int)(x);
+    float m = x - deg;
+    return PI * ((float)deg + 5.0 * m / 3.0) / 180.0;
+}
+
+int geo_dist(pair<float, float> p1, pair<float, float> p2)
+{
+    float lat1 = to_rad(p1.first);
+    float lat2 = to_rad(p2.first);
+    float long1 = to_rad(p1.second);
+    float long2 = to_rad(p2.second);
+
+    float RRR = 6378.388;
+    float q1 = cos(long1 - long2);
+    float q2 = cos(lat1 - lat2);
+    float q3 = cos(lat1 + lat2);
+
+    float result = RRR * acos(0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3)) + 1.0;
+    return (int)(result);
+}
+
 int dist(pair<float, float> p1, pair<float, float> p2)
 {
     int xd = p2.first - p1.first;
@@ -42,8 +76,7 @@ vector<vector<int>> calc_geo_matrix(vector<pair<float, float>> points)
         for (int j = 0; j < points.size(); j++) {
             if (i == j)
                 continue;
-                //TODO: implement
-            distance_matrix[i][j] = dist(points[i], points[j]);
+            distance_matrix[i][j] = geo_dist(points[i], points[j]);
         }
     }
     return distance_matrix;
@@ -93,14 +126,14 @@ vector<int> load_opt_tour(string path)
         }
     } while (line != "TOUR_SECTION");
 
-    if(dimension==0){
+    if (dimension == 0) {
         throw runtime_error("No dimension given in input file!");
     }
 
-    for(int i=0; i<dimension; i++){
+    for (int i = 0; i < dimension; i++) {
         int id;
         file >> id;
-        tour.push_back(id-1);
+        tour.push_back(id - 1);
     }
 
     return tour;
@@ -123,8 +156,7 @@ vector<vector<int>> load_tsp_file(string path)
             dimension = std::stoi(tokens[1]);
         } else if (tokens[0] == "EDGE_WEIGHT_FORMAT") {
             input_type = tokens[1];
-        }
-        else if (tokens[0] == "EDGE_WEIGHT_TYPE") {
+        } else if (tokens[0] == "EDGE_WEIGHT_TYPE") {
             weight_type = tokens[1];
         }
     } while (line != "NODE_COORD_SECTION" && line != "EDGE_WEIGHT_SECTION");
@@ -143,11 +175,11 @@ vector<vector<int>> load_tsp_file(string path)
             points.push_back({ x, y });
         }
 
-        if(weight_type == "EUC_2D"){
+        if (weight_type == "EUC_2D") {
             return calc_dist_matrix(points);
-        }else if(weight_type == "GEO") {
+        } else if (weight_type == "GEO") {
             return calc_geo_matrix(points);
-        }else{
+        } else {
             throw runtime_error("Unsupported input format!");
         }
 
@@ -221,12 +253,11 @@ int traverse(long included, int current)
 
 int main(int argc, char** argv)
 {
-    vector<Point> opt_tour;
     string path(argv[1]);
-    // auto opt_path = path.replace(path.find(".tsp"), 4, ".opt.tour");
-    // load_opt_tour(opt_path, points, opt_tour);
-
     distance_matrix = load_tsp_file(path);
+    auto opt_path = path.replace(path.find(".tsp"), 4, ".opt.tour");
+    auto opt_tour = load_opt_tour(opt_path);
+
 
     size_t perm_count = (1L << distance_matrix.size()) - 1;
     cache = vector<vector<int>>(perm_count, vector<int>(distance_matrix.size(), -1));
@@ -280,5 +311,5 @@ int main(int argc, char** argv)
     // }while(best_node != -1);
     cout << "Best node : " << best_node << "\n";
     cout << "Minimum Distance: " << best_len << "\n";
-    // cout << "Opt:" << path_len(opt_tour);
+    cout << "Opt:" << path_len(opt_tour, distance_matrix);
 }
