@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <chrono>
 
 using namespace std;
 
@@ -36,10 +37,10 @@ int tsp(int current, int included, int n)
     }
 
     int best_len = INT_MAX;
+    int new_included = included & ~(1 << (n - 1 - current));
 
     for (int i = 1; i < n; i++) {
         if (i != current && included & (1 << (n - 1 - i))) {
-            int new_included = included & ~(1 << (n - 1 - current));
             int result = distance_matrix[i][current] + tsp(i, new_included, n);
             best_len = min(best_len, result);
         }
@@ -79,7 +80,7 @@ int main(int argc, char** argv)
     string path(argv[1]);
     distance_matrix = load_tsp_file(path);
     auto opt_path = path.replace(path.find(".tsp"), 4, ".opt.tour");
-    auto opt_tour = load_opt_tour(opt_path);
+    // auto opt_tour = load_opt_tour(opt_path);
 
     size_t perm_count = (1L << (distance_matrix.size() - 1));
     cache = vector<vector<int>>(distance_matrix.size(), vector<int>(perm_count, -1));
@@ -88,6 +89,8 @@ int main(int argc, char** argv)
 
     int best = INT_MAX;
     int best_i = -1;
+
+    auto calc_start = std::chrono::high_resolution_clock::now();
 
     //calculate from bottom-up
     for (int i = 1; i < distance_matrix.size(); i++) {
@@ -102,13 +105,18 @@ int main(int argc, char** argv)
         }
     }
 
-    std::cout << "Opt len: " << path_len(opt_tour, distance_matrix) << "\n";
-    std::cout << "Best len: " << best << "\n";
-    std::cout << "Best i: " << best_i << "\n";
     final_path.push_back(0);
     traverse(best_i, all_included_mask, distance_matrix.size());
     final_path.push_back(0);
     reverse(final_path.begin(), final_path.end());
+
+    auto calc_stop = std::chrono::high_resolution_clock::now();
+    auto time = std::chrono::duration_cast<std::chrono::milliseconds>(calc_stop - calc_start).count();
+    std::cout << "Time: " << time << " ms\n";
+
+    // std::cout << "Opt len: " << path_len(opt_tour, distance_matrix) << "\n";
+    std::cout << "Best len: " << best << "\n";
+    std::cout << "Best i: " << best_i << "\n";
     std::cout << "PATH: ";
     for (auto e : final_path) {
         std::cout << e << " ";

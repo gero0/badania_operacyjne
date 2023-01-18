@@ -199,7 +199,7 @@ vector<vector<int>> load_tsp_file(string path)
     }
 }
 
-int tsp(int current, long included_nodes)
+int tsp(int current, unsigned long included_nodes)
 {
     if ((included_nodes & (1 << current)) == 0) {
         //path from x that doesnt include x - impossible
@@ -239,14 +239,14 @@ int tsp(int current, long included_nodes)
     return best_len;
 }
 
-int traverse(long included, int current)
+int traverse(unsigned long included, int current)
 {
     if (current == 0) {
         return current;
     }
     // vector<int> path;
     int next_node = cache_next_node[included][current];
-    long new_visited = included & ~(1 << current);
+    unsigned long new_visited = included & ~(1 << current);
     cout << traverse(new_visited, next_node) + 1 << " ";
     return current;
 }
@@ -263,7 +263,7 @@ int main(int argc, char** argv)
     cache = vector<vector<int>>(perm_count, vector<int>(distance_matrix.size(), -1));
     cache_next_node = vector<vector<int>>(perm_count, vector<int>(distance_matrix.size(), -1));
 
-    long all_visited_mask = (1 << distance_matrix.size()) - 2;
+    unsigned long all_visited_mask = (1 << distance_matrix.size()) - 2;
 
     int best_len = INT_MAX;
     int best_node = 0;
@@ -291,10 +291,15 @@ int main(int argc, char** argv)
     //     cout << "\n";
     // }
 
+    // int i=0;
+
     // for (auto v : cache) {
     //     for (auto node : v) {
     //         cout << node << " ";
     //     }
+    //     i++;
+
+    //     if(i > 10) break;
     //     cout << "\n";
     // }
 
@@ -309,7 +314,7 @@ int main(int argc, char** argv)
     //     cout << best_node << " ";
     //     best_node = cache_next_node[completed][best_node];
     // }while(best_node != -1);
-    cout << "Best node : " << best_node << "\n";
+    cout << "Best node : " << best_node + 1 << "\n";
     cout << "Minimum Distance: " << best_len << "\n";
     cout << "Opt:" << path_len(opt_tour, distance_matrix);
 }
