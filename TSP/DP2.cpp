@@ -10,7 +10,7 @@
 
 using namespace std;
 
-vector<vector<int>> load_tsp_file(string path);
+vector<vector<int>> load_tsp_file(string path, int problem_len);
 vector<int> load_opt_tour(string path);
 unsigned int path_len(const std::vector<int>& path, vector<vector<int>> dist_matrix);
 
@@ -77,8 +77,12 @@ void traverse(int current, int included, int n)
 
 int main(int argc, char** argv)
 {
+    int problem_len = 0;
+    if (argc > 2) {
+        problem_len = std::stoi(argv[2]);
+    }
     string path(argv[1]);
-    distance_matrix = load_tsp_file(path);
+    distance_matrix = load_tsp_file(path, problem_len);
     auto opt_path = path.replace(path.find(".tsp"), 4, ".opt.tour");
     // auto opt_tour = load_opt_tour(opt_path);
 
@@ -220,7 +224,7 @@ vector<vector<int>> calc_geo_matrix(vector<pair<float, float>> points)
     return distance_matrix;
 }
 
-vector<vector<int>> load_tsp_file(string path)
+vector<vector<int>> load_tsp_file(string path, int problem_len)
 {
     fstream file;
     file.open(path);
@@ -244,6 +248,10 @@ vector<vector<int>> load_tsp_file(string path)
 
     if (dimension == 0) {
         throw runtime_error("No dimension given in input file!");
+    }
+
+    if(problem_len != 0){
+        dimension = problem_len;
     }
 
     if (input_type == "FUNCTION") {
