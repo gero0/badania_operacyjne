@@ -67,12 +67,13 @@ int main(int argc, char** argv)
 #endif
 
         // print_tour(tour);
+        // print_tour(opt_tour);
     }
 
     auto calc_stop = std::chrono::high_resolution_clock::now();
     
     float gap = calc_gap(curr_path_len, opt_path_len);
     std::cout << "FINAL GAP: " << gap << "% FINAL TOUR LENGTH: " << curr_path_len << " OPT. PATH LENGTH: " << opt_path_len << "\n";
-    auto time = std::chrono::duration_cast<std::chrono::milliseconds>(calc_stop - calc_start).count();
-    std::cout << "Time: " << time << " ms";
+    auto time = std::chrono::duration_cast<std::chrono::microseconds>(calc_stop - calc_start).count();
+    std::cout << "Time: " << time << " us";
 }

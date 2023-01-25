@@ -83,7 +83,7 @@ int main(int argc, char** argv)
     }
     string path(argv[1]);
     distance_matrix = load_tsp_file(path, problem_len);
-    auto opt_path = path.replace(path.find(".tsp"), 4, ".opt.tour");
+    // auto opt_path = path.replace(path.find(".tsp"), 4, ".opt.tour");
     // auto opt_tour = load_opt_tour(opt_path);
 
     size_t perm_count = (1L << (distance_matrix.size() - 1));
